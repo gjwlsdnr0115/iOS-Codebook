@@ -92,7 +92,7 @@ segmentedControl.removeSegment(at: index, animated: true)
 코드로 toggle 할 경우
 ```
 @IBAction func toggle(_ sender: Any) {
-    testSwitch.isOn.toggle() // action 메도스 호풀 안됨, 애니메이션 없음
+    testSwitch.isOn.toggle() // action 메도스 호츨 안됨, 애니메이션 없음
 
     testSwitch.setOn(!testSwitch.isOn, animated: true) 
     stateChanged(testSwitch) //IBAction 호출
