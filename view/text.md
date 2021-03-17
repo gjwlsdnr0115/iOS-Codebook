@@ -64,10 +64,41 @@ btn.addTarget(self, action: #selector(showPredefinedValue), for: .touchUpInside)
 inputField.leftView = btn
 inputField.leftViewMode = .always
 ```
+## TextView
+Add insets
+```
+textView.textContainerInset = UIEdgeInsets(top: 30, left: 0, bottom: 30, right: 0)
+textView.scrollIndicatorInsets = textView.textContainerInset
+```
+Text select 했을 때 실행되는 delegate
+```
+func textViewDidChangeSelection(_ textView: UITextView) {
+    let range = textView.selectedRange  //NSRange
+    selectedRangeLabel.text = "\(range)"
+}
+```
+코드로 select Text
+```
+let lastWord = "pariatur?"
+        
+if let text = textView.text as NSString? {
+    let range = text.range(of: lastWord)
+    textView.selectedRange = range
+    textView.scrollRangeToVisible(range)  // 선택된 곳으로 스크롤 이동
+}
+```
+TextView는 내용에서 Data detect가 가능하다
+- storyboard에서도 설정 가능
+```
+textView.dataDetectorTypes = [.link, .address, .phoneNumber]
 
+```
 ## 추가
 - enum (열거형)인 객체들은 .으로 할당한다
     - ex)
     ```
     inputField.leftViewMode = .always
     ```
+- String, NSString
+    - 가능하면 String 사용 - Swift native
+    - 필요한 경우에만 NSSTring으로 cast - Objective-C code
