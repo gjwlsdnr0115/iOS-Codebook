@@ -338,6 +338,35 @@ Regex 정의
 let regex = "^([a-z0-9_\\.-]+)@([\\da-z\\.-]+)\\.([a-z\\.]{2,6})$"
 ```
 
+## InputView & InputAccessory
+- textField에 입력할 때 키보드 외에 다른 view를 통해 할 수 있다
+- storyboard에서 UIView를 controller의 독에 넣는다
+- toolbar도 마찬가지로 독에 넣어서 추가
+- picker나 button으로 input 가능
+
+textField애 inputView 할당
+```
+textField.inputView = pickerContainerView
+textField.inputView = buttonContainerView
+```
+toolBar도 accessoryView로 설정 가능
+```
+textField.inputAccessoryView = accessoryBar
+```
+toolbar의 button은 IBAction으로 따로 구현
+```
+@IBAction func backButtonToggled(_ sender: Any) {
+    if nameField.isFirstResponder {
+        nameField.resignFirstResponder()
+    }
+    else if ageField.isFirstResponder {
+        nameField.becomeFirstResponder()
+    } else {
+        ageField.becomeFirstResponder()
+    }
+}
+```
+
 ## 추가
 - enum (열거형)인 객체들은 .으로 할당한다
     - ex)
@@ -349,3 +378,17 @@ let regex = "^([a-z0-9_\\.-]+)@([\\da-z\\.-]+)\\.([a-z\\.]{2,6})$"
     - 필요한 경우에만 NSSTring으로 cast - Objective-C code
 - control, command 키 동시에 누르고 클릭하면 선언 코드로 넘어감
     - 거기서 사용하는 정보들의 type 항상 확인 필요
+- Button 누르면 소리 나게 하기
+    - `UIInputViewAudioFeedback` 프로토콜 상속
+    - `enableInputClicksWhenVisible`이 `true`를 리턴하게 설정
+    ```
+    class GenderInputView: UIView, UIInputViewAudioFeedback {
+        var enableInputClicksWhenVisible: Bool {
+            return true
+        }
+    }
+    ```
+    - button의 IBAction 안에서
+    ```
+    UIDevice.current.playInputClick()  // 키보드와 같은 사운드
+    ```
