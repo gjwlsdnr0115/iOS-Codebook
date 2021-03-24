@@ -1,4 +1,4 @@
-# table
+# TableView
 ## Basic
 - 스토리보드에서 각 셀의 기본 템플릿 존재
     - 그냥 텍스트만 있을 경우 basic으로 설정
@@ -190,5 +190,107 @@ func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> U
         
     cell.textLabel?.text = list[indexPath.row % list.count]
     return cell
+}
+```
+
+## Cell
+cell 정보에 접근하려면
+```
+func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    
+    if let cell = tableView.cellForRow(at: indexPath) {
+        print(cell.textLabel?.text ?? "none")
+    }
+}
+```
+cell로부터 indexPath에 접근
+```
+if let indexPath = listTableView.indexPath(for: cell) {
+    if let vc = segue.destination as? DetailViewController {
+        vc.value = list[indexPath.row]
+    }
+}
+```
+Cell 정보 다른 viewController로 전달
+- cell 선택해서 새로운 화면 전환되기 직전 호출
+- sender - 선택된 셀
+```
+override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+    if let cell = sender as? UITableViewCell {
+        if let indexPath = listTableView.indexPath(for: cell) {
+            if let vc = segue.destination as? DetailViewController {
+                vc.value = list[indexPath.row]
+            }
+        }
+    }
+}
+```
+cell 정보 가져오는 추가적인 메소드
+```
+listTableView.indexPathForRow(at: CGPoint)
+listTableView.indexPathsForRows(in: CGRect)
+listTableView.visibleCells
+listTableView.indexPathsForVisibleRows
+```
+
+## AccessoryView
+- Disclosure Indicator
+    - 주로 새로운 화면을 push 형태로 보여줄 때 사용
+- Detail Button
+    - 상세 정보 모달로 표시
+    - 버튼 독립적으로 이벤트 처리 가능 - delegate method
+- Detail Disclosure Button
+- Checkmark
+
+System AccessoryView
+```
+func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
+        
+    switch indexPath.row {
+    case 0:
+        cell.textLabel?.text = "Disclosure Indicator"
+        cell.accessoryType = .disclosureIndicator
+    case 1:
+        cell.textLabel?.text = "Detail Button"
+        cell.accessoryType = .detailButton
+    case 2:
+            
+        cell.textLabel?.text = "Detail Disclosure Button"
+        cell.accessoryType = .detailDisclosureButton
+    case 3:
+        cell.textLabel?.text = "Checkmark"
+        cell.accessoryType = .checkmark
+    default:
+        cell.textLabel?.text = "None"
+        cell.accessoryType = .none
+    }
+    return cell
+}
+```
+Custom AccessoryView
+- 코드로만 구현 가능
+- cellForRow에서 하면 overhead 발생
+- 새로운 셀 클래스를 만들고 초기화 시점에 한번만 구현되게 한다
+
+Cell class 선언
+- Custom accessory는 UIView 상속한 모든 뷰로 구성 가능
+- 일반, 편집 모두 두가지 따로 가능 - `editingAccessoryType`
+- accessoryView 사용하는 경우 accessoryType은 무시, nil인 경우에만 신경 쓴다
+
+```
+override func awakeFromNib() {
+    super.awakeFromNib()
+    // Initialization code
+        
+    let v = UIImageView(image: UIImage(systemName: "star"))
+        accessoryView = v
+//        editingAccessoryType
+    }
+```
+Detail Button 이벤트 처리
+```
+func tableView(_ tableView: UITableView, accessoryButtonTappedForRowWith indexPath: IndexPath) {
+    performSegue(withIdentifier: "modalSegue", sender: nil)
 }
 ```
