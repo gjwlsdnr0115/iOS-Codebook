@@ -294,3 +294,221 @@ func tableView(_ tableView: UITableView, accessoryButtonTappedForRowWith indexPa
     performSegue(withIdentifier: "modalSegue", sender: nil)
 }
 ```
+
+## Self Sizing
+- Autolayout을 이용해 self sizing
+- 만약 셀들이 고정된 크기여야 한다면 끄는게 낫다
+    - scrolling 하는데 시간 단축
+
+코드로 구현
+```
+listTableView.rowHeight = UITableViewAutomaticDimension
+listTableView.estimatedRowHeight = UITableViewAutomaticDimension
+```
+각 셀마다 다른 높이 구현
+```
+extension SelfSizingCellViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.row == 0 {
+            return 100
+        }
+        return UITableViewAutomaticDimension
+    }
+    
+    // 이거까지 같이 해주면 스크롤 성능 향상
+    func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.row == 0 {
+            return 100
+        }
+        return UITableViewAutomaticDimension
+    }
+}
+```
+## Custom Cell
+- 셀 높이 직접 정해줘야 한다
+
+tag로 label 연결
+```
+func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(withIdentifier: "customCell", for: indexPath)
+        
+    let target = list[indexPath.row]
+
+    // 태그 통해 접근
+    if let dateLabel = cell.viewWithTag(100) as? UILabel {
+         dateLabel.text = "\(target.date), \(target.hoursFromGMT)시간"
+    }
+
+    if let locationLabel = cell.viewWithTag(200) as? UILabel {
+        locationLabel.text = target.location
+    }
+
+    if let ampmLabel = cell.viewWithTag(300) as? UILabel {
+        ampmLabel.text = target.ampm
+    }
+
+    if let timeLabel = cell.viewWithTag(400) as? UILabel {
+        timeLabel.text = target.time
+    }
+        
+    return cell
+}
+```
+customCell Class 만들어서 연결 - 권장
+```
+class TimeTableViewCell: UITableViewCell {
+    
+@IBOutlet weak var dateLabel: UILabel!
+    @IBOutlet weak var locationLabel: UILabel!
+    @IBOutlet weak var ampmLabel: UILabel!
+    @IBOutlet weak var timeLabel: UILabel!
+    
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        // Initialization code
+    }
+
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+
+}
+```
+```
+func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "customCell", for: indexPath) as! TimeTableViewCell
+        
+        let target = list[indexPath.row]
+        
+        cell.dateLabel.text = "\(target.date), \(target.hoursFromGMT)시간"
+        cell.locationLabel.text = target.location
+        cell.ampmLabel.text = target.ampm
+        cell.timeLabel.text = target.time
+        
+        return cell
+    }
+```
+## Nib 파일로 cell 만들기
+- identifier 스토리보드에서 따로 설정 안해도 됨
+- 여러 tableView에서 사용 가능
+- tableView에 register 하는것은 보통 viewDidLoad에서 한다
+```
+override func viewDidLoad() {
+    super.viewDidLoad()
+        
+    let cellNib = UINib(nibName: "SharedCustomCell", bundle: nil)
+    listTableView.register(cellNib, forCellReuseIdentifier: "SharedCustomCell")
+}
+```
+## Section Header
+
+일반적인 헤더
+```
+func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    return list[section].title
+}
+```
+
+tableView에 Custom header 등록
+```
+listTableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: "header")
+```
+헤더에 표시할 텍스트 설정
+```
+func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+    let headerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "header")
+        
+    headerView?.titleLable.text = list[section].title        
+
+        
+    return headerView
+}
+```
+그 외에 속성 바꿀 때
+- 헤더를 표시하기 직전에 호출
+- 해더에 포함된 레이블 속성 바꿀때
+```
+func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
+    if let headerView = view as? UITableViewHeaderFooterView {
+    headerView.textLabel?.textColor = .systemBlue
+    headerView.textLabel?.textAlignment = .center
+
+        if headerView.backgroundView == nil {
+        let v = UIView(frame: .zero)
+        v.backgroundColor = .secondarySystemFill
+        v.isUserInteractionEnabled = false
+        headerView.backgroundView = v
+        }
+    }
+}
+```
+
+Custom Class로 헤더 구현
+```
+class CustomHeaderView: UITableViewHeaderFooterView {
+
+    @IBOutlet weak var titleLable: UILabel!
+    @IBOutlet weak var countLable: UILabel!
+    @IBOutlet weak var customBackgroundView: UIView!
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        
+        countLable.text = "0"
+        countLable.layer.cornerRadius = 30
+        countLable.clipsToBounds = true
+        backgroundView = customBackgroundView
+    }
+    
+}
+```
+TableView에 레지스터
+```
+override func viewDidLoad() {
+    super.viewDidLoad()
+        
+    let headerNib = UINib(nibName: "CustomHeader", bundle: nil)
+    listTableView.register(headerNib, forHeaderFooterViewReuseIdentifier: "header")
+
+}
+```
+Downcasting 하여 메소드 구현
+```
+func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+    let headerView = tableView.dequeueReusableHeaderFooterView(withIdentifier: "header") as! CustomHeaderView
+        
+    headerView.titleLable.text = list[section].title
+    headerView.countLable.text = "\(list[section].countries.count)"
+        
+
+        
+    return headerView
+}
+```
+## Section Index Title
+- 오른쪽에 있는 섹션 바로가기
+
+delegate method
+```
+func sectionIndexTitles(for tableView: UITableView) -> [String]? {
+    return list.map { $0.title }
+//    return stride(from: 0, through: list.count, by: 2).map { list[$0].title }
+    }
+```
+만약 일부 섹션만 보이게 했다면 이 메서드에서 맞게 구현해줘야 한다
+```
+func tableView(_ tableView: UITableView, sectionForSectionIndexTitle title: String, at index: Int) -> Int {
+    return index*2
+}
+```
+
+## 추가
+- Downcasting
+    - subclass로 casting하는 것
+    - `as?`
+        - 항상 optional 리턴함
+        - 만약 casting 못했으면 `nil` 리턴
+    - `as!`
+        - 강제로 casting하고 force unwrapping
