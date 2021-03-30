@@ -759,10 +759,12 @@ func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, t
     }
 }
 ```
+
 특정 위치 이동 제한
 - 셀 드롭할 때 호출
 - 셀이 이동하는 최종 위치는 이 메소드가 리턴하는 indexPath에 따라 결정
 - 이동 제한 기능 구현할때는 두번째 파라미터 리턴
+
 ```
 func tableView(_ tableView: UITableView, targetIndexPathForMoveFromRowAt sourceIndexPath: IndexPath, toProposedIndexPath proposedDestinationIndexPath: IndexPath) -> IndexPath {
 
@@ -790,6 +792,67 @@ func tableView(_ tableView: UITableView, shouldIndentWhileEditingRowAt indexPath
     }
 ```
 
+## Prefetching
+
+```
+override func viewDidLoad() {
+    super.viewDidLoad()
+    listTableView.prefetchDataSource = self
+    listTableView.refreshControl = refreshControl
+    refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
+}
+```
+Delegate Methods
+```
+extension PrefetchingViewController: UITableViewDataSourcePrefetching {
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        for indexPath in indexPaths {
+            downloadImage(at: indexPath.row)
+        }
+        print(#function, indexPaths)
+    }
+    
+    // prefetching 대상에서 제외된 셀이 있을때마다 호출
+    // 여기서 다운로드 취소 구현
+    func tableView(_ tableView: UITableView, cancelPrefetchingForRowsAt indexPaths: [IndexPath]) {
+        print(#function, indexPaths)
+        for indexPath in indexPaths {
+            cancelDownload(at: indexPath.row)
+        }
+    }
+}
+
+```
+Refresh TableView
+```
+lazy var refreshControl: UIRefreshControl = { [weak self] in
+    let control = UIRefreshControl()
+    control.tintColor = self?.view.tintColor
+    return control
+}()
+    
+    
+@objc func refresh() {
+    DispatchQueue.global().async { [weak self] in
+        guard let strongSelf = self else { return }
+        strongSelf.list = Landscape.generateData()
+        strongSelf.downloadTasks.forEach { $0.cancel() }
+        strongSelf.downloadTasks.removeAll()
+        Thread.sleep(forTimeInterval: 2)
+            
+        DispatchQueue.main.async {
+            strongSelf.listTableView.reloadData()
+            strongSelf.listTableView.refreshControl?.endRefreshing()  // 따로 구현해야 함
+        }
+    }
+}
+```
+
+
+## TableViewController
+- RootView가 View가 아닌 TableView이다
+- Static Cells 사용 가능
+    - cell 내부의 component도 ViewController와 직접 연결 가능
 ## 추가
 - Downcasting
     - subclass로 casting하는 것
@@ -803,3 +866,4 @@ func tableView(_ tableView: UITableView, shouldIndentWhileEditingRowAt indexPath
 list.insert(item, at: Int)  // 특정 인덱스에 추가
 list.append(item)  // 맨 뒤에 추가
 ```
+- FatalError - 호출 즉시 크래시를 발생
