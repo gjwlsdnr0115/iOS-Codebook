@@ -504,6 +504,292 @@ func tableView(_ tableView: UITableView, sectionForSectionIndexTitle title: Stri
 }
 ```
 
+## Cell Selection
+- storyboad에서 single/multi 설정
+
+Cell 선택되기 직전
+- nil 리턴하면 선택 안됨
+- 셀 선택 금지할때 사용
+```
+func tableView(_ tableView: UITableView, willSelectRowAt indexPath: IndexPath) -> IndexPath? {
+        
+    if indexPath.row == 0 {
+        return nil
+    }
+    return indexPath
+}
+```
+Cell 선택된 후 실행
+```
+func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    let target = list[indexPath.section].countries[indexPath.row]
+    showAlert(with: target)
+}
+```
+선택 된 셀 선택 해제
+    - nil 리턴하면 선택 유지
+```
+func tableView(_ tableView: UITableView, willDeselectRowAt indexPath: IndexPath) -> IndexPath? {
+    return indexPath
+}
+```
+선택된 셀 해제 후
+```
+func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+    print("deselected \(indexPath)")
+}
+```
+터치 했을 때 셀 강조되기 전
+```
+func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
+    return indexPath.row != 0
+}
+```
+셀 강조 후
+```
+func tableView(_ tableView: UITableView, didHighlightRowAt indexPath: IndexPath) {
+        
+}
+```
+강조 효과 제거된 후
+```
+func tableView(_ tableView: UITableView, didUnhighlightRowAt indexPath: IndexPath) {
+        
+}
+```
+
+셀 선택/해제 관련 methods
+```
+class SingleSelectionCell: UITableViewCell {
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        textLabel?.textColor = UIColor(white: 217.0/255.0, alpha: 1.0)
+        textLabel?.highlightedTextColor = UIColor.black
+    }
+    
+    
+    // 선택 상태 바뀔 때마다 실행
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+        // 선택되면 체크마크
+        accessoryType = selected ? .checkmark : .none
+        
+    }
+    
+    // 강조 상태 바뀔 때 마다 실행
+    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        super.setHighlighted(highlighted, animated: animated)
+    }
+}
+```
+
+## Editing Mode
+- 반드시 데이터 베열 먼저 바꾸고 테이블에 업데이트
+
+Cell 삭제
+```
+list.remove(at: indexPath.row)
+listTableView.deleteRows(at: [indexPath], with: .automatic)
+```
+Cell 추가
+```
+list.append(target)
+listTableView.insertRows(at: [indexPath], with: .automatic)
+```
+
+
+ UITableViewDataSource
+ - 편집 시작 전
+    - 특정 셀 편집 제한할 때 사용
+    ```
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+            return true
+        }
+    ```
+- 삭제/추가버튼 눌렀을 때
+    ```
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+        switch editingStyle {
+        case .insert:
+            let target = productList[indexPath.row]
+            let insertIndexPath = IndexPath(row: selectedList.count, section: 0)
+            selectedList.append(target)
+            productList.remove(at: indexPath.row)
+            
+            // 테이블에 셀 추가
+            
+            if #available(iOS 11.0, *) {
+                listTableView.performBatchUpdates({ [weak self] in
+                    self?.listTableView.insertRows(at: [insertIndexPath], with: .automatic)
+                    self?.listTableView.deleteRows(at: [indexPath], with: .automatic)
+                }, completion: nil)
+
+            } else {
+                // insert delete reload 연속으로 사용시 꼭 해야한다
+                listTableView.beginUpdates()
+                listTableView.insertRows(at: [insertIndexPath], with: .automatic)
+                listTableView.deleteRows(at: [indexPath], with: .automatic)
+                listTableView.endUpdates()
+            }
+            
+        case .delete:
+            let target = selectedList[indexPath.row]
+            let insertIndexPath = IndexPath(row: productList.count, section: 1)
+            productList.append(target)
+            selectedList.remove(at: indexPath.row)
+            
+            listTableView.beginUpdates()
+            listTableView.insertRows(at: [insertIndexPath], with: .automatic)
+            listTableView.deleteRows(at: [indexPath], with: .automatic)
+            listTableView.endUpdates()
+        default:
+            break
+        }
+    }
+    ```
+
+UITableViewDelegate
+- 편집 스타일 설정
+    ```
+    func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCellEditingStyle {
+        switch indexPath.section {
+        case 0:
+            return .delete
+        case 1:
+            return .insert
+        default:
+            return .none  // 아무 버튼 표시 X - 순서만 바꾸는 기능 구현할 때
+        }
+    }
+    ```
+- Swipe Delete
+    ```
+    // 시작 전
+    func tableView(_ tableView: UITableView, willBeginEditingRowAt indexPath: IndexPath) {
+        editingSwitch.setOn(true, animated: true)
+    }
+    
+    // 삭제 후
+    func tableView(_ tableView: UITableView, didEndEditingRowAt indexPath: IndexPath?) {
+        editingSwitch.setOn(false, animated: true)
+    }
+    
+    // 삭제 문구
+    func tableView(_ tableView: UITableView, titleForDeleteConfirmationButtonForRowAt indexPath: IndexPath) -> String? {
+        return "Remove"
+    }
+    ```
+
+## Custom Swipe Action
+- iOS 11.0 이상만 가능
+- 이전은 `tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]?` 사용해야 한다
+
+```
+@available(iOS 11.0, *)
+extension SwipeActionViewController: UITableViewDelegate {
+
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let emailAction = UIContextualAction(style: .normal, title: "Email") { [weak self] (action, view, completion) in
+            if let data = self?.list[indexPath.row] {
+                self?.sendEmail(with: data)  // 일반 func
+            }
+            completion(true)  // 성공적으로 실행된거라면 true 리턴
+        }
+        emailAction.backgroundColor = UIColor.blue
+        emailAction.image = UIImage(named: "mail")  // 이미지 추가 - 셀 크기 작으면 텍스트는 짤림
+            
+        let messageAction = UIContextualAction(style: .normal, title: "SMS") { [weak self] (action, view, completion) in
+            if let data = self?.list[indexPath.row] {
+                self?.sendMessage(with: data)
+            }
+            completion(true)
+        }
+            
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] (action, view, completion) in
+            self?.delete(at: indexPath)
+        }
+            
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction, emailAction, messageAction])
+        configuration.performsFirstActionWithFullSwipe = true
+        return configuration
+    }
+}
+```
+
+## Reordering Cells
+
+Reorder Cells
+- 평상시에는 비활성화
+- indexPath 통해 특정 셀만 이동시키기 가능
+- dataSource
+```
+func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
+    return true
+}
+```
+- 셀 이동과 애니메이션만 해결
+- 메소드 내부에서 실제 배열 내에서 데이터 이동을 구현해야한다
+```
+func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+    var target: String? = nil
+        
+    switch sourceIndexPath.section {
+    case 0:
+        target = firstList.remove(at: sourceIndexPath.row)
+    case 1:
+        target = secondList.remove(at: sourceIndexPath.row)
+    case 2:
+        target = thirdList.remove(at: sourceIndexPath.row)
+    default:
+        break
+    }
+        
+    guard let item = target else { return }
+        
+    switch destinationIndexPath.section {
+    case 0:
+        // insert 써야 셀과 배열의 인덱스 순서가 맞다
+        firstList.insert(item, at: destinationIndexPath.row)
+    case 1:
+        secondList.insert(item, at: destinationIndexPath.row)
+    case 2:
+        thirdList.insert(item, at: destinationIndexPath.row)
+    default:
+        break
+    }
+}
+```
+특정 위치 이동 제한
+- 셀 드롭할 때 호출
+- 셀이 이동하는 최종 위치는 이 메소드가 리턴하는 indexPath에 따라 결정
+- 이동 제한 기능 구현할때는 두번째 파라미터 리턴
+```
+func tableView(_ tableView: UITableView, targetIndexPathForMoveFromRowAt sourceIndexPath: IndexPath, toProposedIndexPath proposedDestinationIndexPath: IndexPath) -> IndexPath {
+
+    // 첫번째 section으로 이동 제한
+    if proposedDestinationIndexPath.section == 0 {
+        return sourceIndexPath
+    }
+        
+    return proposedDestinationIndexPath
+}
+```
+
+Editing 기능에서 삭제 기능 없애기
+
+삭제 버튼 제거 - delegate
+```
+func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCellEditingStyle {
+    return .none
+}
+```
+여백 제거 - dataSource
+```
+func tableView(_ tableView: UITableView, shouldIndentWhileEditingRowAt indexPath: IndexPath) -> Bool {
+        return false
+    }
+```
+
 ## 추가
 - Downcasting
     - subclass로 casting하는 것
@@ -512,3 +798,8 @@ func tableView(_ tableView: UITableView, sectionForSectionIndexTitle title: Stri
         - 만약 casting 못했으면 `nil` 리턴
     - `as!`
         - 강제로 casting하고 force unwrapping
+- set
+```
+list.insert(item, at: Int)  // 특정 인덱스에 추가
+list.append(item)  // 맨 뒤에 추가
+```
