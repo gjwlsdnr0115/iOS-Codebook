@@ -207,6 +207,105 @@ if let layout = listCollectionView.collectionViewLayout as? UICollectionViewFlow
     layout.estimatedItemSize = UICollectionViewFlowLayoutAutomaticSize
 }
 ```
+
+Supplementary View
+- Header, Footer
+- storyboard에서 추가할 수 있고
+- 만약 동일한 view를 여러 collectionView에 사용한다면 custom class 생성 후 사용
+
+Custom Class
+```
+class HeaderCollectionReusableView: UICollectionReusableView {
+        
+    @IBOutlet weak var sectionTitleLabel: UILabel!
+}
+```
+or
+```
+class FooterCollectionReusableView: UICollectionReusableView {
+    var sectionFooterLabel: UILabel!
+    
+    private func setup() {
+        let lbl = UILabel(frame: bounds)
+        lbl.translatesAutoresizingMaskIntoConstraints = false
+        lbl.font = UIFont.boldSystemFont(ofSize: 20)
+        addSubview(lbl)
+        
+        if #available(iOS 11.0, *) {
+            lbl.leadingAnchor.constraintEqualToSystemSpacingAfter(leadingAnchor, multiplier: 1.0).isActive = true
+        } else {
+            lbl.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
+        }
+        lbl.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
+        
+        sectionFooterLabel = lbl
+    }
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+}
+```
+만약 스토리보드가 아닌 코드로 추가한다면
+```
+listCollectionView.register(FooterCollectionReusableView.self, forSupplementaryViewOfKind: UICollectionElementKindSectionFooter, withReuseIdentifier: "footer")
+```
+
+Flow Layout 통해서 supplementary view 속성 바꾸기
+```
+if let layout = listCollectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+    layout.sectionHeadersPinToVisibleBounds = true  // sticky
+    layout.footerReferenceSize = CGSize(width: 50, height: 50)  // 코드로 register 한 view는 따로 크기 지정해야 한다
+}
+```
+dataSource
+```
+func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
+
+    // multiple supplementary views
+    switch kind {
+    case UICollectionElementKindSectionHeader:
+        let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "header", for: indexPath) as! HeaderCollectionReusableView
+        header.sectionTitleLabel.text = list[indexPath.section].title
+        return header
+    case UICollectionElementKindSectionFooter:
+        let footer = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "footer", for: indexPath) as! FooterCollectionReusableView
+        footer.sectionFooterLabel.text = list[indexPath.section].title
+        return footer
+    default:
+        fatalError("Unsupported kind")
+    }    
+}
+```
+동적으로/개별 section 크기 지정
+- UICollectionViewDelegateFlowLayout
+```
+extension SupplementaryViewViewController: UICollectionViewDelegateFlowLayout {
+
+    // header 크기 지정
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
+        
+    }
+    
+    // footer 크기 지정
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForFooterInSection section: Int) -> CGSize {
+        
+    }
+}
+```
+
+추가적인 api
+```
+listCollectionView.supplementaryView(forElementKind: String, at: IndexPath)
+listCollectionView.indexPathsForVisibleSupplementaryElements(ofKind: String)
+listCollectionView.visibleSupplementaryViews(ofKind: String)
+```
 ## 추가
 - IndexPath.item vs IndexPath.row
     - tableView에서는 row, collectionView에서는 item 사용
