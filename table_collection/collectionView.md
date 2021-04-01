@@ -306,8 +306,183 @@ listCollectionView.supplementaryView(forElementKind: String, at: IndexPath)
 listCollectionView.indexPathsForVisibleSupplementaryElements(ofKind: String)
 listCollectionView.visibleSupplementaryViews(ofKind: String)
 ```
+
+## Selection
+- multi-selection / selection 비활성화는 코드를 통해서만 설정 가능
+
+Single selection
+```
+listCollectionView.allowsSelection = true
+listCollectionView.allowsMultipleSelection = false
+```
+
+Delegate methods
+
+```
+func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    let color = list[indexPath.item].color
+    view.backgroundColor = color
+        
+    // 선택 시 셀의 색 바꾸기
+    if let cell = collectionView.cellForItem(at: indexPath) {
+        if let imageView = cell.contentView.viewWithTag(100) as? UIImageView {
+            imageView.image = checkImage
+        }
+    }
+}
+```
+
+- 셀 선택하기 직전에 호출
+- true 리턴해야 실제로 선택된다
+```
+func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
+        
+    // 현재 선택되어 있는 indexPaths
+    guard let list = collectionView.indexPathsForSelectedItems else {
+        return true
+    }        
+    return !list.contains(indexPath)
+}
+```
+- 선택 해제
+- true 리턴해야 실제로 선택 해제
+- ex) 선택 해제 전에 사용자가 특성 행동 해야한다면 false 리턴하고 경고 메세지 띄우기
+```
+func collectionView(_ collectionView: UICollectionView, shouldDeselectItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+```
+- 선택 해제 후 UI 업데이트 할때 활용
+```
+func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+
+}
+```
+
+- highlight 전에 호출
+- true 리턴해야 highlight
+- false 리턴하면 highlight 선택 모두 안됨
+    
+```
+func collectionView(_ collectionView: UICollectionView, shouldHighlightItemAt indexPath: IndexPath) -> Bool {
+    return true
+}
+```
+    
+- highlight 된 이후
+```
+func collectionView(_ collectionView: UICollectionView, didHighlightItemAt indexPath: IndexPath) {
+    if let cell = listCollectionView.cellForItem(at: indexPath) {
+        cell.layer.borderWidth = 6
+    }
+}
+```
+
+- highlight 해제 후 호출
+```
+func collectionView(_ collectionView: UICollectionView, didUnhighlightItemAt indexPath: IndexPath) {
+    if let cell = listCollectionView.cellForItem(at: indexPath) {
+        cell.layer.borderWidth = 0.0
+    }
+}
+```
+코드로 셀 선택
+- nil 전달하면 모든 선택 해제
+```
+let targetIndexPath = IndexPath(item: item, section: 0)
+listCollectionView.selectItem(at: targetIndexPath, animated: true, scrollPosition: .centeredHorizontally)
+```
+셀 선택 해제
+```
+listCollectionView.deselectItem(at: IndexPath, animated: Bool)
+```
+or
+```
+listCollectionView.selectItem(at: nil, animated: true, scrollPosition: .left)
+        
+// 스크롤 초기화
+let firstIndexPath = IndexPath(item: 0, section: 0)
+listCollectionView.scrollToItem(at: firstIndexPath, at: .left, animated: true)
+```
+
+## Editing
+- 따로 편집모드 없음
+- 편집에 필요한 UI 직접 구현
+- api - insert, move, delete, reload
+
+섹션에서 셀 insert/delete
+- 반드시 배열에서 data 먼저 이동한 후 셀 이동
+```
+extension EditViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if indexPath.section == 0 {
+            selectedList.remove(at: indexPath.item)
+            collectionView.deleteItems(at: [indexPath])
+        } else {
+            let deleted = colorList[indexPath.section-1].colors.remove(at: indexPath.item)
+//            collectionView.deleteItems(at: [indexPath])
+            
+            let targetIndexPath = IndexPath(item: selectedList.count, section: 0)
+            selectedList.append(deleted)
+//            collectionView.insertItems(at: [targetIndexPath])
+            // 이 메소드로 한번에 하는것도 가능
+            collectionView.moveItem(at: indexPath, to: targetIndexPath)
+        }
+    }
+}
+
+```
+Section 초기화
+```
+func emptySelectedList() {
+    selectedList.removeAll()
+    let targetSection = IndexSet(integer: 0)
+    listCollectionView.reloadSections(targetSection)
+}
+```
+Section 추가
+```
+func insertSection() {
+    // 데이터 추가
+    let sectionData = MaterialColorDataSource.Section()
+    colorList.insert(sectionData, at: 0)
+
+    // 섹션 추가    
+    let targetSection = IndexSet(integer: 1)
+    listCollectionView.insertSections(targetSection)
+}
+```
+Section 삭제
+```
+func deleteSecondSection() {
+    // 데이터 삭제
+    colorList.remove(at: 0)
+
+    // 섹션 삭제
+    let targetSection = IndexSet(integer: 1)
+    listCollectionView.deleteSections(targetSection)
+    }
+```
+Section 이동
+```
+func moveSecondSectionToThird() {
+    // 데이터 이동
+    let target = colorList.remove(at: 0)
+    colorList.insert(target, at: 1)
+        
+    // 섹션 이동
+    listCollectionView.moveSection(1, toSection: 2)
+}
+```
+
+
+
 ## 추가
 - IndexPath.item vs IndexPath.row
     - tableView에서는 row, collectionView에서는 item 사용
 - 실제 storyboard에서 셀 크기 조절할 때는 collectionView에다가 해야한다
     - cell에다가 하는 설정은 그냥 디자인을 위한 프로토타입 셀에만 적용됨
+- Get random Int
+```
+let item = Int(arc4random_uniform(UInt32(list.count)))
+```
