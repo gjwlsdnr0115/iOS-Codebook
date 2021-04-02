@@ -475,7 +475,199 @@ func moveSecondSectionToThird() {
 }
 ```
 
+## Reordering
+- Pan gesture recognizer를 통해 구현
+    - 스토리보드에서 object를 scene 독에 추가하고 collectionView와 아웃렛 연결
+    - IBAction도 연결
+```
+@IBAction func handlePanGesture(_ sender: UIPanGestureRecognizer) {
+    let location = sender.location(in: listCollectionView)
+        
+    switch sender.state {
 
+    // 샐 이동 시작
+    case .began:
+        if let indexPath = listCollectionView.indexPathForItem(at: location) {
+            listCollectionView.beginInteractiveMovementForItem(at: indexPath)
+        }
+    // 셀 이동 중
+    case .changed:
+        listCollectionView.updateInteractiveMovementTargetPosition(location)
+    // 셀 이동 완료
+    case .ended:
+        listCollectionView.endInteractiveMovement()
+    default:
+        listCollectionView.cancelInteractiveMovement()
+    }
+}
+```
+Datasource에 메소드 구현하여 실제 데이터의 이동도 설정
+- pan gesture 정상적으로 끝난 후 호츌
+- 바뀐 위치에 따라 내부 데이터 이동 구현
+```
+func collectionView(_ collectionView: UICollectionView, moveItemAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+    let target = list[sourceIndexPath.section].colors.remove(at: sourceIndexPath.item)
+    list[destinationIndexPath.section].colors.insert(target, at: destinationIndexPath.item)
+}
+```
+
+- 셀 이동 직전 호출
+- true 리턴해야 실제로 이동 가능
+```
+func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
+    return true
+}
+```
+
+## Prefetching Data
+- 스크롤 성능 위해
+- cell fetching & data fetching
+- storyboard에서 prefetching 활성화
+
+Cell prefetching
+```
+extension PrefetchingViewController: UICollectionViewDataSource {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return list.count
+    }
+
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath)
+        
+        if let imageView = cell.viewWithTag(100) as? UIImageView {
+            if let image = list[indexPath.row].image {
+                imageView.image = image
+            } else {
+                imageView.image = nil
+                downloadImage(at: indexPath.row)
+            }
+        }
+        
+        return cell
+    }
+}
+
+// Cell prefetching
+extension PrefetchingViewController: UICollectionViewDelegate {
+    
+    // cell 화면에 표시되기 직전에 호출
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        if let imageView = cell.viewWithTag(100) as? UIImageView {
+            if let image = list[indexPath.row].image {
+                imageView.image = image
+            } else {
+                imageView.image = nil
+
+            }
+        }
+    }
+}
+```
+Data Prefetching
+- prefetching 하다가 도중에 취소될 수도 있기 때문에 cancelDownload도 구현해야 한다 - 스크롤 빨리 할때
+```
+extension PrefetchingViewController: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        for indexPath in indexPaths {
+            downloadImage(at: indexPath.item)
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        for indexPath in indexPaths {
+            cancelDownload(at: indexPath.item)
+        }
+    }
+}
+```
+
+Download image 코드 예시
+```
+extension PrefetchingViewController {
+    func downloadImage(at index: Int) {
+
+        // 이미지 이미 다운 되었는지 확인
+        guard list[index].image == nil else {
+            return
+        }
+        
+        // 동일한 이미지 다운로드 하는 작업이 존재하는지 확인
+        let targetUrl = list[index].url
+        guard !downloadTasks.contains(where: { $0.originalRequest?.url == targetUrl }) else {
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: targetUrl) { [weak self] (data, response, error) in
+            if let error = error {
+                print(error.localizedDescription)
+                return
+            }
+            
+            if let data = data, let image = UIImage(data: data), let strongSelf = self {
+                strongSelf.list[index].image = image
+                let reloadTargetIndexPath = IndexPath(row: index, section: 0)
+                DispatchQueue.main.async {
+                    if strongSelf.listCollectionView.indexPathsForVisibleItems.contains(reloadTargetIndexPath) == .some(true) {
+                        strongSelf.listCollectionView.reloadItems(at: [reloadTargetIndexPath])
+                    }
+                }
+                
+                strongSelf.completeTask()
+            }
+        }
+        task.resume()
+        downloadTasks.append(task)
+    }
+    
+    
+    func completeTask() {
+        downloadTasks = downloadTasks.filter { $0.state != .completed }
+    }
+    
+    // 다운 취소 메소드
+    func cancelDownload(at index: Int) {
+        let targetUrl = list[index].url
+        guard let taskIndex = downloadTasks.index(where: { $0.originalRequest?.url == targetUrl }) else {
+            return
+        }
+        let task = downloadTasks[taskIndex]
+        task.cancel()
+        downloadTasks.remove(at: taskIndex)
+    }
+}
+```
+
+Refresh Control
+- control & action 선언
+```
+lazy var refreshControl: UIRefreshControl = { [weak self] in
+    let control = UIRefreshControl()
+    control.tintColor = self?.view.tintColor
+    return control
+}()
+    
+    
+@objc func refresh() {
+    DispatchQueue.global().async { [weak self] in
+        guard let strongSelf = self else { return }
+        strongSelf.list = Landscape.generateData()
+        strongSelf.downloadTasks.forEach { $0.cancel() }
+        strongSelf.downloadTasks.removeAll()
+        Thread.sleep(forTimeInterval: 2)
+            
+        DispatchQueue.main.async {
+            strongSelf.listCollectionView.reloadData()
+            strongSelf.listCollectionView.refreshControl?.endRefreshing()
+        }
+    }
+}
+```
+- viewDidLoad에서 설정
+```
+listCollectionView.refreshControl = refreshControl
+refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
+```
 
 ## 추가
 - IndexPath.item vs IndexPath.row
