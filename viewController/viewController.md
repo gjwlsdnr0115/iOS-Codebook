@@ -365,3 +365,19 @@ override func awakeFromNib() {
         
     }
 ```
+
+## Split View Controller
+- 한 화면에 두개의 vc 보여주는것 - 아이패드 설정앱
+- master VC / detail VC
+
+## Storyboard
+
+다른 스토리보드에 있는 vc 띄울 경우
+- 만약 같은 스토리보드면 optional binding해서 `storyboard` 속성에 바로 접근하여 사용하면 된다
+```
+@IBAction func presentModelVC(_ sender: Any) {
+    let subStoryboard = UIStoryboard(name: "Sub", bundle: nil)
+    let vc = subStoryboard.instantiateViewController(identifier: "modalVC")
+    present(vc, animated: true, completion: nil)
+}
+```
