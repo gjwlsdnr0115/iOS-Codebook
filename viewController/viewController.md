@@ -381,3 +381,209 @@ override func awakeFromNib() {
     present(vc, animated: true, completion: nil)
 }
 ```
+
+## Segue
+- Source -> Segue -> Destination
+- Segue Trigger - Segue를 실행시키는 버튼이나 셀
+- Transition 스퀀스:
+    - trigger에서 이벤트 발생
+    - `shouldPerformSegue(withIdentifier, sender:)`
+    - segue 생성
+    - destinationVC 생성
+        - `init()`, `awakeFromNib()`
+    - `prepare(for:, sender:)`
+        - 전환 전에 필요한 준비 작업 구현
+        - 데이터 전달하는 코드 구현
+    - Transition 시작
+
+- Adaptive Segue:
+    - push
+    - replace
+    - modal
+    - popover
+
+Perform Segue
+- segue가 VC랑 직접 연결되어 있을 떼
+```
+performSegue(withIdentifier: "manualSegue", sender: self)
+```
+Should perform segue
+- true를 리턴해야 실제로 segue 작동한다
+```
+override func shouldPerformSegue(withIdentifier identifier: String, sender: Any?) -> Bool {
+    if identifier == "conditionalSegue" {
+        return grantedSwitch.isOn
+    }        
+    return true
+}
+```
+Prepare
+```
+override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+    if let vc = segue.destination as? MessageViewController {
+        vc.segueName = segue.identifier  // destination에 segue identifier 데이터 전달
+    }
+}
+```
+
+## Unwind Segue
+
+돌아가려는 VC 에서
+- 코드 구현
+    ```
+    @IBAction func unwindToFirst(_ unwindSegue: UIStoryboardSegue) {
+        print(#function, type(of: unwindSegue.source), "=>", type(of: unwindSegue.destination))
+    }
+    ```
+- 출발하는 VC에서 exit와 연결
+
+시퀀스 순서:
+- `ThirdViewController`: `shouldPerformSegue(withIdentifier:sender:)`
+- `FirstViewController`: `canPerformUnwindSegueAction(_:from:withSender:)`
+- `ThirdViewController`: `prepare(for:sender:)`
+- `unwindToFirst(_:) ThirdViewController => FirstViewController`
+
+
+## Custom Segue
+- `UIStoryboardSegue` 상속
+- `perform()` 메소드 override 하여 구현
+
+```
+import UIKit
+
+class HalfEmbeddingSegue: UIStoryboardSegue {
+    override init(identifier: String?, source: UIViewController, destination: UIViewController) {
+        super.init(identifier: identifier, source: source, destination: destination)  // 반드시 상속
+    }
+    
+    override func perform() {  // 여기서 구현
+        var frame = source.view.bounds
+        frame.origin.y = frame.height
+        frame.size.height = frame.height / 2
+        
+        source.view.addSubview(destination.view)
+        destination.view.frame = frame
+        destination.view.alpha = 0.0
+        
+        source.addChildViewController(destination)
+        
+        
+        frame.origin.y = source.view.bounds.height / 2
+        
+        UIView.animate(withDuration: 0.3) {
+            self.destination.view.frame = frame
+            self.destination.view.alpha = 1.0
+        }
+        
+    }
+    
+    
+}
+```
+Custom segue unwind
+- 별도로 클래스 구현해야 한다
+```
+class HalfEmbeddingUnwindSegue: UIStoryboardSegue {
+    override func perform() {
+        var frame = source.view.frame
+        frame = frame.offsetBy(dx: 0, dy: frame.height)
+        
+        UIView.animate(withDuration: 0.3) {
+            self.source.view.frame = frame
+            self.source.view.alpha = 0.0
+        } completion: { (finished) in
+            self.source.view.removeFromSuperview()
+            self.source.removeFromParentViewController()
+        }
+
+    }
+}
+```
+
+## Status Bar
+
+전체 앱에 대하여 바꾸기
+- 검은색:
+    - 기본 설정
+- 흰색
+    - target에서 설정 바꾸기
+    - info.plist에서 View controller-based status bar appearance의 값을 NO로 설정
+
+개별 VC에 설정하기
+- hidden
+
+```
+// get을 따로 못하기 때문에 이렇게 설정
+var hidden = false
+override var prefersStatusBarHidden: Bool {
+    return hidden
+}
+    
+// animation 스타일 설정
+override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation {
+    return .slide
+}
+
+실제 값 바꾸기
+@IBAction func toggleVisibility(_ sender: Any) {
+    hidden = !hidden
+        
+    UIView.animate(withDuration: 0.3) {
+        self.setNeedsStatusBarAppearanceUpdate()
+    }
+}
+```
+- style
+```
+var style = UIStatusBarStyle.default
+override var preferredStatusBarStyle: UIStatusBarStyle {
+    return style
+}
+    
+@IBAction func toggleStyle(_ sender: Any) {
+    style = style == .default ? .lightContent : .default
+    
+    let color = style == .default ? UIColor.white : UIColor.darkGray
+    UIView.animate(withDuration: 0.3) {
+        self.view.backgroundColor = color
+        self.setNeedsStatusBarAppearanceUpdate()
+    }
+}
+```
+
+만약 Navigation Controller에 embedd 되어 있다면:
+```
+import UIKit
+
+class CustomStatusBarStyleNavigationController: UINavigationController {
+    override var childViewControllerForStatusBarHidden: UIViewController? {
+        return topViewController  // 마지막에 표시된 child 속성을 설정
+    }
+    
+    override var childViewControllerForStatusBarStyle: UIViewController? {
+        return topViewController
+    }
+    
+}
+
+```
+
+## Home Indicator
+- iphone X 이상 적용
+
+안보이게 하기
+```
+override func prefersHomeIndicatorAutoHidden() -> Bool {
+    return true
+}
+```
+
+만약 Navigation Controller에 embedd 되어 있다면:
+```
+class CustomStatusBarStyleNavigationController: UINavigationController {
+
+    override func childViewControllerForHomeIndicatorAutoHidden() -> UIViewController? {
+        return topViewController
+    }    
+}
+```
