@@ -118,9 +118,115 @@ Autolayout Animation
     self.widthConstraint.constant = 200
     self.heightConstraint.constant = 200
     redView.setNeedsUpdateConstraints()
-    
+
     UIView.animate(withDuration: 0.3, animations: {
         self.view.layoutIfNeeded()
     })
 }
+```
+
+## Property Animator
+- iOS 10 이상부터는 이거 권장
+- 중간에 add도 가능
+- inactive, active, stop 세가지 state
+
+Start
+```
+@IBAction func animate(_ sender: Any) {
+        
+    // handler에는 에니메이션 종료 위치 나타내는 열거형 전달
+    animator = UIViewPropertyAnimator.runningPropertyAnimator(withDuration: 7, delay: 0, options: [], animations: {
+        self.moveAndResize()  // 애니메이션 코드
+    }, completion: { position in
+        switch position {
+        case .start:
+            print("Start")
+        case .end:
+            print("End")
+        case .current:
+            print("Current")
+        }
+    })
+}
+```
+or
+```
+@IBAction func animate(_ sender: Any) {
+ 
+    animator = UIViewPropertyAnimator(duration: 7, curve: .linear, animations: {
+        self.moveAndResize()
+    })
+        
+    // handler는 따로 추가해야 한다
+    animator?.addCompletion({ (position) in
+        print("Done \(position)")
+    })
+}
+```
+
+Pause
+```
+@IBAction func pause(_ sender: Any) {
+    animator?.pauseAnimation()
+    print(animator?.fractionComplete)  // 애니메이션 남은 비율
+}
+```
+
+Resume
+```
+@IBAction func resume(_ sender: Any) {
+    animator?.startAnimation()
+}
+```
+
+Stop
+```
+@IBAction func stop(_ sender: Any) {
+    animator?.stopAnimation(false)  // true - inactive, false - stoped
+    animator?.finishAnimation(at: .current) // inactive로 전환
+}
+```
+Add
+```
+@IBAction func add(_ sender: Any) {
+        
+    // inactive, active 상태에서만 호출
+    // stopped에서 호출하면 crash
+    animator?.addAnimations({
+        self.redView.backgroundColor = UIColor.blue
+    }, delayFactor: 0)
+}
+```
+
+Interactive Animation
+- 이렇게 직접 애니메이션에 관여 가능 (slider)
+```
+@IBAction func sliderChanged(_ sender: UISlider) {
+    // 실행된 애니메이션 비율
+    animator?.fractionComplete = CGFloat(sender.value)
+}
+```
+
+## Motion Effect
+- 기울였을때 움직이는 효과
+
+```
+override func viewDidLoad() {
+    super.viewDidLoad()
+        
+    // x축에 motion effect 추가
+    // keypath: motion 적용할 대상의 keypath
+    let x = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+    x.minimumRelativeValue = -100
+    x.maximumRelativeValue = 100
+        
+    let y = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+    y.minimumRelativeValue = -100
+    y.maximumRelativeValue = 100
+        
+    let group = UIMotionEffectGroup()
+    group.motionEffects = [x, y]
+        
+    targetImageView.addMotionEffect(group)
+    }
 ```
