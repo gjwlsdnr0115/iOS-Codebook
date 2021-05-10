@@ -587,3 +587,19 @@ class CustomStatusBarStyleNavigationController: UINavigationController {
     }    
 }
 ```
+
+## Adaptive Layout
+코드로 trait 변할때 구현
+- 일단은 storyboard에서 하는게 편하다
+```
+override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
+    super.willTransition(to: newCollection, with: coordinator)
+        
+    switch (newCollection.horizontalSizeClass, newCollection.verticalSizeClass) {
+    case (.regular, .regular):
+    contentTextView.font = UIFont.systemFont(ofSize: 30)
+    default:
+        contentTextView.font = UIFont.systemFont(ofSize: 30)
+    }
+}
+```
