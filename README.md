@@ -4,7 +4,7 @@
 
 - Animation & Transition
     - [Animation](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/animation_transition/animation.md)
-    - [Trainsition](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/animation_transition/transition.md)
+    - [Transition](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/animation_transition/transition.md)
 - [AutoLayout](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/autolayout.md)
 - [Concurrency](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/concurrency.md)
 - Control
