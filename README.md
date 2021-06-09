@@ -7,7 +7,12 @@
     - [Trainsition](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/animation_transition/transition.md)
 - [AutoLayout](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/autolayout.md)
 - [Concurrency](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/concurrency.md)
-- [Control](https://github.com/gjwlsdnr0115/iOS-Codebook/tree/main/control)
+- Control
+    - [Button](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/control/button.md)
+    - [ContentViews](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/control/contentviews.md)
+    - [Control](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/control/control.md)
+    - [Picker](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/control/picker.md)
+    - [SysControls](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/control/syscontrols.md)
 - [Data](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/data.md)
 - [Database](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/database.md)
 - [Date](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/date.md)
@@ -22,5 +27,5 @@
     - [Image](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/view/image.md)
     - [Text](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/view/text.md)
     - [View](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/view/view.md)
-- ViewController
+- [ViewController](https://github.com/gjwlsdnr0115/iOS-Codebook/blob/main/viewController.md)
 
